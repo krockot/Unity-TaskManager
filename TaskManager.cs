@@ -49,7 +49,9 @@
 /// When the first Task is created in an application, a "TaskManager" GameObject
 /// will automatically be added to the scene root with the TaskManager component
 /// attached.  This component will be responsible for dispatching all coroutines
-/// behind the scenes, as it were.
+/// behind the scenes.
+///
+/// Task also provides an event that is triggered when the coroutine exits.
 
 using UnityEngine;
 using System.Collections;
@@ -73,6 +75,13 @@ public class Task
 			return task.Paused;
 		}
 	}
+	
+	/// Delegate for termination subscribers.  manual is true if and only if
+	/// the coroutine was stopped with an explicit call to Stop().
+	public delegate void FinishedHandler(bool manual);
+	
+	/// Termination event.  Triggered when the coroutine completes execution.
+	public event FinishedHandler Finished;
 
 	/// Creates a new Task object for the given coroutine.
 	///
@@ -81,6 +90,7 @@ public class Task
 	public Task(IEnumerator c, bool autoStart = true)
 	{
 		task = TaskManager.CreateTask(c);
+		task.Finished += TaskFinished;
 		if(autoStart)
 			Start();
 	}
@@ -107,6 +117,13 @@ public class Task
 		task.Unpause();
 	}
 	
+	void TaskFinished(bool manual)
+	{
+		FinishedHandler handler = Finished;
+		if(handler != null)
+			handler(manual);
+	}
+	
 	TaskManager.TaskState task;
 }
 
@@ -117,6 +134,11 @@ class TaskManager : MonoBehaviour
 		public IEnumerator Coroutine;
 		public bool Running;
 		public bool Paused;
+		
+		public delegate void FinishedHandler(bool manual);
+		public event FinishedHandler Finished;
+
+		bool stopped;
 		
 		public TaskState(IEnumerator c)
 		{
@@ -141,6 +163,7 @@ class TaskManager : MonoBehaviour
 		
 		public void Stop()
 		{
+			stopped = true;
 			Running = false;
 		}
 		
@@ -160,6 +183,10 @@ class TaskManager : MonoBehaviour
 					}
 				}
 			}
+			
+			FinishedHandler handler = Finished;
+			if(handler != null)
+				handler(stopped);
 		}
 	}
 
