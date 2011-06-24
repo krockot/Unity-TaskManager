@@ -197,13 +197,12 @@ class TaskManager : MonoBehaviour
 		return singleton.NewTask(coroutine);
 	}
 
-	static GameObject owner;
 	static TaskManager singleton;
 
 	static void Initialize()
 	{
-		owner = new GameObject("TaskManager");
-		singleton = owner.AddComponent<TaskManager>();
+		GameObject go = new GameObject("TaskManager");
+		singleton = go.AddComponent<TaskManager>();
 	}
 	
 	TaskState NewTask(IEnumerator coroutine)
