@@ -131,55 +131,66 @@ class TaskManager : MonoBehaviour
 {
 	public class TaskState
 	{
-		public IEnumerator Coroutine;
-		public bool Running;
-		public bool Paused;
-		
+		public bool Running {
+			get {
+				return running;
+			}
+		}
+
+		public bool Paused  {
+			get {
+				return paused;
+			}
+		}
+
 		public delegate void FinishedHandler(bool manual);
 		public event FinishedHandler Finished;
 
+		IEnumerator coroutine;
+		bool running;
+		bool paused;
 		bool stopped;
 		
 		public TaskState(IEnumerator c)
 		{
-			Coroutine = c;
+			coroutine = c;
 		}
 		
 		public void Pause()
 		{
-			Paused = true;
+			paused = true;
 		}
 		
 		public void Unpause()
 		{
-			Paused = false;
+			paused = false;
 		}
 		
 		public void Start()
 		{
-			Running = true;
+			running = true;
 			singleton.StartCoroutine(CallWrapper());
 		}
 		
 		public void Stop()
 		{
 			stopped = true;
-			Running = false;
+			running = false;
 		}
 		
 		IEnumerator CallWrapper()
 		{
 			yield return null;
-			IEnumerator e = Coroutine;
-			while(Running) {
-				if(Paused)
+			IEnumerator e = coroutine;
+			while(running) {
+				if(paused)
 					yield return null;
 				else {
 					if(e != null && e.MoveNext()) {
 						yield return e.Current;
 					}
 					else {
-						Running = false;
+						running = false;
 					}
 				}
 			}
@@ -190,23 +201,14 @@ class TaskManager : MonoBehaviour
 		}
 	}
 
-	public static TaskState CreateTask(IEnumerator coroutine)
-	{
-		if(singleton == null)
-			Initialize();
-		return singleton.NewTask(coroutine);
-	}
-
 	static TaskManager singleton;
 
-	static void Initialize()
+	public static TaskState CreateTask(IEnumerator coroutine)
 	{
-		GameObject go = new GameObject("TaskManager");
-		singleton = go.AddComponent<TaskManager>();
-	}
-	
-	TaskState NewTask(IEnumerator coroutine)
-	{
+		if(singleton == null) {
+			GameObject go = new GameObject("TaskManager");
+			singleton = go.AddComponent<TaskManager>();
+		}
 		return new TaskState(coroutine);
 	}
 }
